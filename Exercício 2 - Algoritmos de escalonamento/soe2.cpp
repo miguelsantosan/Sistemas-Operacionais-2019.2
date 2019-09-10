@@ -7,7 +7,7 @@
 
 using namespace std;
 
-typedef enum Estado { NOVO, PRONTO, EXECUTANDO, TERMINADO } ESTADO;
+typedef enum Estado { NOVO = 0, PRONTO, EXECUTANDO, TERMINADO } ESTADO;
 
 typedef struct Tarefa{
     int tempo_ingresso;
@@ -20,6 +20,8 @@ typedef struct Tarefa{
     int tempo_restante;
 
     ESTADO estado_atual;
+
+    Tarefa* proxima_tarefa;
 } TAREFA;
 
 int nTarefas;
@@ -27,7 +29,7 @@ TAREFA vTarefas[100];
 
 TAREFA* TAREFA_ATUAL;
 
-int texec, tvida, tespera, trocasDeContexto;
+int TEMPO_DE_EXECUCAO, TEMPO_DE_VIDA, TEMPO_DE_ESPERA, trocasDeContexto;
 double tempos[2] = {0, 0}; //tempos[0]-> tempo medio de execucao; tempos[1] = tempo medio de espera;
 
 void scanInput();
@@ -58,9 +60,9 @@ int main(int argc, char **argv){
 }
 
 void reseta(){
-    trocasDeContexto = 0;
-    texec = 0;
-    tespera = 0;
+    trocasDeContexto = -1;
+    TEMPO_DE_EXECUCAO = 0;
+    TEMPO_DE_ESPERA = 0;
     tempos[1] = 0;
     tempos[2] = 0;
 }
@@ -87,16 +89,16 @@ void FirstComeFirstServed(TAREFA *v){
     reseta();
 
     for (int i = 0; i < nTarefas; i++){
-        texec = texec + v[i].tempo_duracao - v[i].tempo_ingresso;
+        TEMPO_DE_EXECUCAO = TEMPO_DE_EXECUCAO + v[i].tempo_duracao - v[i].tempo_ingresso;
         trocasDeContexto++;
     }
     for (int i = 1; i < nTarefas; i++){
-        tespera = tespera + v[i-1].tempo_duracao - v[i].tempo_duracao;
+        TEMPO_DE_ESPERA = TEMPO_DE_ESPERA + v[i-1].tempo_duracao - v[i].tempo_duracao;
     }
-    texec = texec / nTarefas;
-    tespera = tespera / nTarefas;
-    tempos[1] = texec;
-    tempos[2] = tespera;
+    TEMPO_DE_EXECUCAO = TEMPO_DE_EXECUCAO / nTarefas;
+    TEMPO_DE_ESPERA = TEMPO_DE_ESPERA / nTarefas;
+    tempos[1] = TEMPO_DE_EXECUCAO;
+    tempos[2] = TEMPO_DE_ESPERA;
 
     cout << "--FCFS--" << endl;
     cout << "Tt = " << tempos[1] << endl;
@@ -111,6 +113,22 @@ void RoundRobin(TAREFA *v){
 
     for (int i = 0; i < nTarefas; i++){
         filaDeTarefas.push(vTarefas[i]);
+    }
+
+    for (auto t : filaDeTarefas){
+        TAREFA_ATUAL = filaDeTarefas.front();
+        filaDeTarefas.pop();
+        if (TAREFA_ATUAL.tempo_restante >= QUANTUM){
+            TEMPO_DE_EXECUCAO += QUANTUM;
+            TAREFA_ATUAL.tempo_restante -= QUANTUM;
+            if (TAREFA_ATUAL.tempo_restante != 0){
+                filaDeTarefas.push(TAREFA_ATUAL*);
+            }
+        }
+        else {
+            TEMPO_DE_EXECUCAO += TAREFA_ATUAL.tempo_restante;
+            TAREFA_ATUAL.tempo_restante = 0;
+        }
     }
 
     cout << "--RR--" << endl;
