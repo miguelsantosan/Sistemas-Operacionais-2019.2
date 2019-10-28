@@ -1,3 +1,7 @@
+//Trabalho feito em dupla
+//Alunos: Gabriel Aureo
+//        Miguel Santos
+
 #include <stdlib.h>
 #include <stdio.h>
 
