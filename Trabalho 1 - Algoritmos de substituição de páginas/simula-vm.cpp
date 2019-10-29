@@ -4,6 +4,9 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <vector>
+
+using namespace std;
 
 typedef struct{
     int frames;
@@ -123,21 +126,28 @@ int lru(int nFrames, int ref, TIMED_FRAME * frames){
 //  para nao procurar em instrucoes ja executadas
 //Se achar, retorna 1;
 //Caso contrario, retorna 0;
-int search_page_in_frames(int pg, TIMED_FRAME * frames, int position) 
+int search_page_in_frames(int page, TIMED_FRAME * frames, int position) 
 { 
     int size = sizeof(frames)/sizeof(frames[0]); //tamanho que devo percorrer na busca
 
-    for (int i = position; i < size; i++) 
-        if (frames[i].page == pg) 
-            return 1; 
+    for (int i = position; i < size; i++){
+        if (frames[i].page == page){
+            return 1;
+        }
+    }
     return 0; 
 }
 
-int search_page_in_refs(){
-    
+int search_page_in_refs(int pg, vector<int> vec, int position){
+    for (int i = position; i < vec.size(); i++){
+        if (vec[i] == pg){
+            return 1;
+        }
+    }
+    return 0;  
 }
 
-int opt(int nFrames, int ref, TIMED_FRAME * frames){
+int opt(int nFrames, int ref, TIMED_FRAME * frames, vector<int> refs_vec){
     //static int frames[n];
     static int faults;
     static int time = 0;
@@ -146,12 +156,11 @@ int opt(int nFrames, int ref, TIMED_FRAME * frames){
     int oldest_time = __INT_MAX__;
     int oldest = 0;
 
-    int pos = 0;
+    int ref_pos = 0;
     int size = sizeof(frames)/sizeof(frames[0]);
     int farthest = -1;
     
     for(int i = 0; i < nFrames; i++){
-        pos++;
         if(ref == frames[i].page){ //page hit
             fault = 0;
             break;
@@ -168,16 +177,16 @@ int opt(int nFrames, int ref, TIMED_FRAME * frames){
 
     if(fault){ //A pagina que procuro nao esta em nenhum frame
         faults++;
-        for(int i = pos; i < nFrames; i++){
+        for(int i = ref_pos; i < nFrames; i++){
             //Se nao encontrar a pagina, ela nao sera usada no futuro, e posso substitui-la
-            if(!search_page_in_refs(i, pos)){
+            if(!search_page_in_refs(ref, refs_vec, ref_pos)){
                 farthest = frames[i].page;
                 break;
             }
         }
         //Se farthest == -1, é porque não encontrei uma pagina que nao sera mais usada
         if(farthest == -1){
-            for(int i = pos; i < size; i++){
+            for(int i = ref_pos; i < size; i++){
 
             }
         }
@@ -188,6 +197,7 @@ int opt(int nFrames, int ref, TIMED_FRAME * frames){
     //tiro a pagina mais longe de ser usada, coloco a pagina usada ao chamar a funcao
     frames[farthest].page = ref;
 
+    ref_pos++;
     time++;
     return faults;
 
@@ -202,7 +212,7 @@ int main(int argc, char * argv[]){
     TIMED_FRAME * opt_frames;
 
     //Array de int com as referencias dadas na entrada
-    int * ref_array;
+    vector<int> ref_vector;
     int i = 0;
     
 
@@ -213,11 +223,12 @@ int main(int argc, char * argv[]){
         return 0;
     }
     results.frames = nFrames;
-    
-    
-    fifo_frames = malloc(sizeof(TIMED_FRAME) * nFrames);
-    lru_frames = malloc(sizeof(TIMED_FRAME) * nFrames);
-    opt_frames = malloc(sizeof(TIMED_FRAME) * nFrames);
+
+    fifo_frames = (TIMED_FRAME *) malloc(sizeof(TIMED_FRAME) * nFrames);
+    lru_frames = (TIMED_FRAME *) malloc(sizeof(TIMED_FRAME) * nFrames);
+    opt_frames = (TIMED_FRAME *) malloc(sizeof(TIMED_FRAME) * nFrames);
+
+    //-1 indica que o frame esta vazio
     for(int i = 0; i< nFrames; i++){
         fifo_frames[i].page = -1;
         lru_frames[i].page = -1;
@@ -232,21 +243,17 @@ int main(int argc, char * argv[]){
         //printf("%d\n", page);
         results.fifo_faults = fifo(nFrames, page, fifo_frames);
         results.lru_faults = lru(nFrames, page, lru_frames);
+
+        ref_vector.push_back(page);
     }
 
-    ref_array = malloc(sizeof(int) * results.references);
-
-    while (nextRef(&page) != -1){
-        ref_array[i] = page;
-        i++;
+    for(int reference : ref_vector){
+        results.opt_faults = opt(nFrames, reference, opt_frames, ref_vector);
     }
 
-    for (int i = 0; i < results.references; i++){
-        if(ref_array[i] != 0) printf("%d\n", ref_array[i]);
+    for(int i = 0; i< ref_vector.size(); i++){
+        //if(ref_vector.at(i)!=0) printf("%d\n",ref_vector.at(i));
     }
-    
-
-    results.opt_faults = opt(nFrames, page, lru_frames);
 
     output(results);
     
