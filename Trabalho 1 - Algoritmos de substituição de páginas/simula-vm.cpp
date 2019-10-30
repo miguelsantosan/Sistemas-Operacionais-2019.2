@@ -44,6 +44,7 @@ void output(RESULTS r){
 }
 
 int fifo(int nFrames, int ref, TIMED_FRAME * frames){
+    puts("aaa;");
     //static int frames[n];
     static int faults;
     static int time = 0;
@@ -83,6 +84,7 @@ int fifo(int nFrames, int ref, TIMED_FRAME * frames){
 }
 
 int lru(int nFrames, int ref, TIMED_FRAME * frames){
+    puts("bbb;");
     //static int frames[n];
     static int faults;
     static int time = 0;
@@ -148,6 +150,7 @@ int search_page_in_refs(int pg, vector<int> vec, int position){
 }
 
 int opt(int nFrames, int ref, TIMED_FRAME * frames, vector<int> refs_vec){
+    puts("ccc;");
     //static int frames[n];
     static int faults;
     static int time = 0;
@@ -159,6 +162,7 @@ int opt(int nFrames, int ref, TIMED_FRAME * frames, vector<int> refs_vec){
     int ref_pos = 0;
     int size = sizeof(frames)/sizeof(frames[0]);
     int farthest = -1;
+    int farthest_pos = -1;
     
     for(int i = 0; i < nFrames; i++){
         if(ref == frames[i].page){ //page hit
@@ -179,23 +183,37 @@ int opt(int nFrames, int ref, TIMED_FRAME * frames, vector<int> refs_vec){
         faults++;
         for(int i = ref_pos; i < nFrames; i++){
             //Se nao encontrar a pagina, ela nao sera usada no futuro, e posso substitui-la
-            if(!search_page_in_refs(ref, refs_vec, ref_pos)){
-                farthest = frames[i].page;
-                break;
+            if(search_page_in_refs(ref, refs_vec, ref_pos)){
+                //Guardo a proxima referencia de cada pagina contina num frame
+                frames[i].next_ref = i;
+            }
+            else {
+                //Se a pagina nao tiver referencia futura, marco next_ref como -1
+                frames[i].next_ref = -1;
             }
         }
-        //Se farthest == -1, é porque não encontrei uma pagina que nao sera mais usada
-        if(farthest == -1){
-            for(int i = ref_pos; i < size; i++){
-
+        //Olho se ainda tem algum next_ref == -1
+        //Se next_ref == -1, significa que a pagina nao sera mais usada, entao posso tirar
+        //Se nao tiver nenhum next_ref == -1, pego a maior de todas pra tirar
+        for(int i = ref; i < nFrames; i++){
+            if(frames[i].next_ref == -1){
+                farthest = frames[i].page;
+                farthest_pos = i;
+                break;
+            }
+            else{
+                if(frames[i].next_ref > farthest){
+                    farthest = frames[i].next_ref;
+                    farthest_pos = i;
+                }
             }
         }
         
     }
     frames[oldest].time = time;
 
-    //tiro a pagina mais longe de ser usada, coloco a pagina usada ao chamar a funcao
-    frames[farthest].page = ref;
+    //tiro a pagina marcada como farthest, coloco a pagina usada ao chamar a funcao
+    frames[farthest_pos].page = ref;
 
     ref_pos++;
     time++;
